@@ -3,6 +3,10 @@ import logging
 import boto3
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -35,6 +39,10 @@ def upload_file(file_path, bucket_name, s3_key):
 
 def sync_to_s3(local_directory, bucket_name, s3_directory):
     """ Sync local directory to S3 bucket """
+    if not os.path.exists(local_directory):
+        logging.error(f"Local directory not found: {local_directory}")
+        return False
+
     # Get list of files already in S3
     s3_files = set(get_s3_file_list(bucket_name, s3_directory))
     
@@ -50,6 +58,10 @@ def sync_to_s3(local_directory, bucket_name, s3_directory):
     # Filter out files that already exist in S3
     files_to_upload = [(local_path, s3_key) for local_path, s3_key in local_files if s3_key not in s3_files]
     
+    if not files_to_upload:
+        logging.info("No new files to upload.")
+        return True
+
     # Upload files in parallel
     with ThreadPoolExecutor(max_workers=10) as executor:
         future_to_file = {executor.submit(upload_file, local_path, bucket_name, s3_key): (local_path, s3_key) 
@@ -63,6 +75,8 @@ def sync_to_s3(local_directory, bucket_name, s3_directory):
             except Exception as e:
                 logging.error(f"Exception occurred while uploading {local_path}: {e}")
 
+    return True
+
 if __name__ == "__main__":
     local_directory = "generated_images"
     bucket_name = os.getenv("S3_BUCKET_NAME")
@@ -71,5 +85,7 @@ if __name__ == "__main__":
     if not bucket_name:
         logging.error("S3_BUCKET_NAME environment variable is not set")
     else:
-        sync_to_s3(local_directory, bucket_name, s3_directory)
-        logging.info("Sync to S3 completed")
+        if sync_to_s3(local_directory, bucket_name, s3_directory):
+            logging.info("Sync to S3 completed successfully")
+        else:
+            logging.error("Sync to S3 failed")

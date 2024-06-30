@@ -4,6 +4,10 @@ import yaml
 import openai
 from dotenv import load_dotenv
 from config import CONFIG, INPUT_CSV, ENHANCED_DESCRIPTIONS_CSV
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load environment variables
 load_dotenv()
@@ -22,16 +26,23 @@ def improve_description(description, gpt_prompts):
     messages = gpt_prompts.copy()
     messages[-1]['content'] = messages[-1]['content'].format(description=description)
     
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=messages
-    )
-    
-    return response.choices[0].message['content'].strip()
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4o",
+            messages=messages
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        logging.error(f"Error in GPT-4 API call: {str(e)}")
+        return description  # Return original description if API call fails
 
 def process_csv(input_file, output_file):
     """Process input CSV and create output CSV with enhanced descriptions."""
     gpt_prompts = load_gpt_prompts()
+    
+    if not os.path.exists(input_file):
+        logging.error(f"Input file {input_file} not found.")
+        return False
     
     with open(input_file, 'r') as infile, open(output_file, 'w', newline='') as outfile:
         reader = csv.DictReader(infile)
@@ -45,7 +56,7 @@ def process_csv(input_file, output_file):
             original_description = row['description']
             
             enhanced_description = improve_description(original_description, gpt_prompts)
-            print(f"Enhanced description for image {image_id}: {enhanced_description}")
+            logging.info(f"Enhanced description for image {image_id}: {enhanced_description}")
             
             writer.writerow({
                 'image_id': image_id,
@@ -53,10 +64,14 @@ def process_csv(input_file, output_file):
                 'original_description': original_description,
                 'enhanced_description': enhanced_description
             })
+    
+    return True
 
 if __name__ == "__main__":
     input_file = INPUT_CSV
     output_file = ENHANCED_DESCRIPTIONS_CSV
     
-    process_csv(input_file, output_file)
-    print(f"Enhanced descriptions saved to {output_file}")
+    if process_csv(input_file, output_file):
+        logging.info(f"Enhanced descriptions saved to {output_file}")
+    else:
+        logging.error("Failed to process CSV file")
