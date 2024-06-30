@@ -1,0 +1,12 @@
+csv_files:
+  input: "input.csv"
+  enhanced_descriptions: "enhanced_descriptions.csv"
+  images: "images.csv"
+
+s3:
+  bucket_name: "${S3_BUCKET_NAME}"
+  input_key: "input.csv"
+
+output:
+  directory: "generated_images"
+  format: "png"

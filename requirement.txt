@@ -1,0 +1,5 @@
+openai
+pandas
+pillow 
+python-dotenv
+stability-sdk

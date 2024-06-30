@@ -1,0 +1,12 @@
+stability_ai:
+  steps: 30
+  cfg_scale: 7.0
+  width: 1024
+  height: 1024
+  samples: 1
+  sampler: K_DPMPP_2M
+  style_preset: "photographic"
+  clip_guidance_preset: "FAST_BLUE"
+
+output:
+  format: "png"
