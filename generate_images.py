@@ -6,6 +6,7 @@ from stability_sdk import client
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 from dotenv import load_dotenv
 from config import CONFIG, ENHANCED_DESCRIPTIONS_CSV, IMAGES_CSV, OUTPUT_DIR, OUTPUT_FORMAT
+import hashlib
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -34,8 +35,7 @@ def generate_image(prompt, config):
             height=config['stability_ai']['height'],
             samples=config['stability_ai']['samples'],
             sampler=getattr(generation, f"SAMPLER_{config['stability_ai']['sampler']}"),
-            style_preset=config['stability_ai']['style_preset'],
-            clip_guidance_preset=config['stability_ai']['clip_guidance_preset']
+            style_preset=config['stability_ai']['style_preset']
         )
         
         for resp in response:
@@ -52,13 +52,29 @@ def generate_image(prompt, config):
         logging.error(f"Error generating image for prompt: {prompt}. Error: {str(e)}")
         return None
 
+def generate_deterministic_guid(image_id,context, original_description):
+    """
+    Generate a deterministic GUID based on input parameters.
+    """
+    # Combine all parameters into a single string
+    combined = f"{image_id}:{context}:{original_description}"
+    
+    # Generate SHA256 hash
+    hash_object = hashlib.sha256(combined.encode())
+    hash_digest = hash_object.hexdigest()
+    
+    # Format the hash as a GUID
+    guid = f"{hash_digest[:8]}-{hash_digest[8:12]}-{hash_digest[12:16]}-{hash_digest[16:20]}-{hash_digest[20:32]}"
+    
+    return guid
+
 def process_descriptions(input_csv, output_csv, config):
     """Process the enhanced descriptions CSV and generate images."""
-    output_dir = config['output']['directory']
+    output_dir = OUTPUT_DIR
     os.makedirs(output_dir, exist_ok=True)
     
     # Read input CSV
-    input_df = pd.read_csv(input_csv)
+    input_df = pd.read_csv(input_csv, encoding='utf-8')
     
     # Check if output CSV exists and read it, otherwise create an empty DataFrame
     if os.path.exists(output_csv):
@@ -66,6 +82,8 @@ def process_descriptions(input_csv, output_csv, config):
     else:
         output_df = pd.DataFrame(columns=['image_id', 'context', 'original_description', 'enhanced_description', 'file_name'])
     
+    output_data = []
+
     # Process each row in the input DataFrame
     for _, row in input_df.iterrows():
         image_id = row['image_id']
@@ -78,11 +96,11 @@ def process_descriptions(input_csv, output_csv, config):
                 logging.info(f"Skipping image_id {image_id}: Already generated")
                 continue
         
-        context = row['context']
-        original_description = row['original_description']
-        enhanced_description = row['enhanced_description']
+        context = row['context'].strip()
+        original_description = row['original_description'].strip()
+        enhanced_description = row['enhanced_description'].strip()
         
-        output_file = f"{context}_{image_id}.{config['output']['format']}"
+        output_file = f"/{context}/{image_id}_{generate_deterministic_guid(image_id, context, original_description)}.{config['output']['format']}"
         file_path = os.path.join(output_dir, output_file)
         
         image_data = generate_image(enhanced_description, config)
@@ -101,13 +119,14 @@ def process_descriptions(input_csv, output_csv, config):
                 'file_name': output_file
             }
             if existing_row.empty:
-                output_df = output_df.append(new_row, ignore_index=True)
+                output_df = output_data.append(new_row, ignore_index=True)
             else:
                 output_df.loc[output_df['image_id'] == image_id] = new_row
         else:
             logging.warning(f"Failed to generate image for {image_id}")
     
     # Save the updated DataFrame to CSV
+    output_df = pd.DataFrame(output_data)
     output_df.to_csv(output_csv, index=False)
     logging.info(f"Updated CSV saved to {output_csv}")
 

@@ -1,14 +1,46 @@
 messages:
   - role: system
-    content: >
+    content: |
       You are an AI assistant specialized in improving image descriptions for AI image generation.
       Your task is to take a simple description and enhance it with more details, focusing on visual elements,
       style, mood, and composition. The improved description should be clear, concise, and optimized for
       AI image generation models.
+  - role: user
+    content: |
+      Cheat Sheet:
+      a (word) - increase attention to word by a factor of 1.1
+      a ((word)) - increase attention to word by a factor of 1.21 (= 1.1 * 1.1)
+      a [word] - decrease attention to word by a factor of 1.1
+      a (word:1.5) - increase attention to word by a factor of 1.5
+      a (word:0.25) - decrease attention to word by a factor of 4 (= 1 / 0.25)
+      a \(word\) - use literal () characters in prompt
+  - role: user
+    content: |
+      Make Your Stable Diffusion Prompts Clear, and Concise
+      Use Detailed Subjects and Scenes to Make Your Stable Diffusion Prompts More Specific
+      -Scene setting is more than just describing physical attributes; it encompasses emotions and atmosphere as well. 
+      -Detailing in a prompt should always serve a clear purpose, such as setting a mood, highlighting an aspect, or defining the setting. 
+      Contextualizing Your Prompts: Providing Rich Detail Without Confusion
+      - "a forest." < "a sunlit forest with towering pines and a carpet of fallen autumn leaves."
+      Do Not Overload Your Prompt Details
+      - "a light wind that can barely be felt but heard" < "whispering breeze"
+      Technique: Adjust the weight of keywords using the syntax (keyword: factor), where a factor less than 1 makes it less important, and more than 1 increases its importance.
+      -Adjust Strength with () and []
+      The keyword categories are: Subject, Medium, Style, Resolution,Additional details, Color, Mood, Composition, and Visual elements.
+      You don't have to include keywords from all categories. Treat them as a checklist to remind you what could be used.
+  - role: user
+    content: |
+      Examples:
+      1. a beautiful and powerful mysterious sorceress, smile, sitting on a rock, lightning magic, hat, 
+      detailed leather clothing with gemstones, dress, castle background, digital art, hyperrealistic, fantasy, dark art, artstation, highly detailed, sharp focus
+      2. houses in front, houses background, straight houses, digital art, smooth, sharp focus, gravity falls style, doraemon style, shinchan style, anime style
 
   - role: user
-    content: >
+    content: |
       Please improve the following image description. Add more details about the visual elements,
-      style, mood, and composition. Keep the description concise but rich in imagery:
+      style, mood, and composition. I want a simple 2D anime or cartoon image. People and animals character should have expressive faces and poses. 
+      The background should be simple. Do not add any extra text like "Sure, I can help with that." or "Here is the improved description.". 
+      Just provide the enhanced description.
+      Keep the description concise but rich in imagery:
 
       "{description}"
