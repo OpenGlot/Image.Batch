@@ -6,6 +6,7 @@ csv_files:
 s3:
   bucket_name: "${S3_BUCKET_NAME}"
   input_key: "image_descriptions.csv"
+  folder: "images"
 
 stability_ai:
   steps: 30

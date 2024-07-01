@@ -65,7 +65,7 @@ def main():
         logging.error("S3_BUCKET_NAME environment variable is not set")
         return
     
-    sync_successful = sync_to_s3(OUTPUT_DIR, bucket_name, 'batch_generated_images')
+    sync_successful = sync_to_s3(OUTPUT_DIR, bucket_name, CONFIG['s3']['folder'], IMAGES_CSV)
     if sync_successful:
         logging.info("Sync to S3 completed successfully")
     else:

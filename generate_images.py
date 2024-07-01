@@ -2,8 +2,7 @@ import os
 import yaml
 import pandas as pd
 import logging
-from stability_sdk import client
-import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
+import requests
 from dotenv import load_dotenv
 from config import CONFIG, ENHANCED_DESCRIPTIONS_CSV, IMAGES_CSV, OUTPUT_DIR, OUTPUT_FORMAT
 import hashlib
@@ -18,46 +17,56 @@ load_dotenv()
 with open('./configs/images.yml', 'r') as config_file:
     config = yaml.safe_load(config_file)
 
-# Initialize Stability AI client
-stability_api = client.StabilityInference(
-    key=os.getenv('STABILITY_API_KEY'),
-    verbose=True,
-)
+# Initialize Stability AI API endpoint
+STABILITY_API_URL = "https://api.stability.ai/v2beta/stable-image/generate/sd3"
 
 def generate_image(prompt, config):
-    """Generate an image using StabilityAI based on the given prompt and configuration."""
+    """Generate an image using Stable Diffusion 3 Large Turbo based on the given prompt and configuration."""
     try:
-        # Create the text prompt
-        text_prompt = generation.Prompt(text=prompt)
-        
-        # If there's a negative prompt in the config, add it
-        if 'negative_prompt' in config['stability_ai'] and config['stability_ai']['negative_prompt']:
-            negative_prompt = generation.Prompt(text=config['stability_ai']['negative_prompt'], parameters=generation.PromptParameters(weight=-1))
-            prompts = [text_prompt, negative_prompt]
-        else:
-            prompts = [text_prompt]
+        headers = {
+            "Authorization": f"Bearer {os.getenv('STABILITY_API_KEY')}",
+            "Accept": "image/*"
+        }
 
-        response = stability_api.generate(
-            prompt=prompts,
-            steps=config['stability_ai']['steps'],
-            cfg_scale=config['stability_ai']['cfg_scale'],
-            width=config['stability_ai']['width'],
-            height=config['stability_ai']['height'],
-            samples=config['stability_ai']['samples'],
-            sampler=getattr(generation, f"SAMPLER_{config['stability_ai']['sampler']}"),
-            style_preset=config['stability_ai']['style_preset']
-        )
+        aspect_ratio = "1:1" #@param ["21:9", "16:9", "3:2", "5:4", "1:1", "4:5", "2:3", "9:16", "9:21"]
+        seed = 0 #@param {type:"integer"}
+        output_format = "png" #@param ["jpeg", "png"]
+
+        params = {
+            "prompt" : prompt,
+            "aspect_ratio" : aspect_ratio,
+            "seed" : seed,
+            "output_format" : output_format,
+            "model" : "sd3-large-turbo"
+        }
+
+        # Encode parameters
+        files = {}
+        image = params.pop("image", None)
+        mask = params.pop("mask", None)
+        if image is not None and image != '':
+            files["image"] = open(image, 'rb')
+        if mask is not None and mask != '':
+            files["mask"] = open(mask, 'rb')
+        if len(files)==0:
+            files["none"] = ''
         
-        for resp in response:
-            for artifact in resp.artifacts:
-                if artifact.finish_reason == generation.FILTER:
-                    logging.warning(f"NSFW content detected for prompt: {prompt}")
-                    return None
-                if artifact.type == generation.ARTIFACT_IMAGE:
-                    return artifact.binary
+        data = {
+            "prompt": prompt,
+            "model": "sd3-large-turbo",
+            "output_format": config['output']['format'],
+            "aspect_ratio": "1:1",  # Default to 1:1, adjust as needed
+            "seed": 0,  # Use random seed
+            "mode": "text-to-image"
+        }
         
-        logging.warning(f"No image generated for prompt: {prompt}")
-        return None
+        response = requests.post(STABILITY_API_URL, headers=headers, files=files, data=data)
+        
+        if response.status_code == 200:
+            return response.content
+        else:
+            logging.error(f"Error generating image. Status code: {response.status_code}, Response: {response.text}")
+            return None
     except Exception as e:
         logging.error(f"Error generating image for prompt: {prompt}. Error: {str(e)}")
         return None
