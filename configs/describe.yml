@@ -38,7 +38,8 @@ messages:
   - role: user
     content: |
       Please improve the following image description. Add more details about the visual elements,
-      style, mood, and composition. I want a simple 2D anime or cartoon image. People and animals character should have expressive faces and poses. 
+      style, mood, and composition. I want a simple 2D anime or cartoon image using "illustration by (Studio ghibli style, Art by Hayao Miyazaki:1.2)"
+      People and animals character should have expressive faces and poses. 
       The background should be simple. Do not add any extra text like "Sure, I can help with that." or "Here is the improved description.". 
       Just provide the enhanced description.
       Keep the description concise but rich in imagery:

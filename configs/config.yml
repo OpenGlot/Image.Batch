@@ -6,7 +6,7 @@ csv_files:
 s3:
   bucket_name: "${S3_BUCKET_NAME}"
   input_key: "image_descriptions.csv"
-  
+
 stability_ai:
   steps: 30
   cfg_scale: 7.0
@@ -14,8 +14,9 @@ stability_ai:
   height: 1024
   samples: 1
   sampler: K_DPMPP_2M
-  style_preset: "photographic"
+  style_preset: "comic-book" # 3d-model analog-film anime cinematic comic-book digital-art enhance fantasy-art isometric line-art low-poly modeling-compound neon-punk origami photographic pixel-art tile-texture
   clip_guidance_preset: "FAST_BLUE"
+  negative_prompt: "blurry, low quality, worst quality, low resolution, artifacts, oversaturated, text, watermark, logo, signature, out of frame, cropped, deformed, malformed, disfigured, bad anatomy, bad hands, duplicate"
 
 output:
   directory: "generated_images"

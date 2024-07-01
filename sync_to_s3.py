@@ -4,6 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
+import pandas as pd
 
 # Load environment variables
 load_dotenv()
@@ -15,7 +16,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 s3 = boto3.client('s3')
 
 def get_s3_file_list(bucket_name, prefix):
-    """ Get a list of all files under specified S3 bucket and prefix """
+    """Get a list of all files under specified S3 bucket and prefix"""
     s3_keys = []
     try:
         paginator = s3.get_paginator('list_objects_v2')
@@ -28,7 +29,7 @@ def get_s3_file_list(bucket_name, prefix):
     return s3_keys
 
 def upload_file(file_path, bucket_name, s3_key):
-    """ Upload a single file to S3 """
+    """Upload a single file to S3"""
     try:
         s3.upload_file(file_path, bucket_name, s3_key)
         logging.info(f"Uploaded {file_path} to s3://{bucket_name}/{s3_key}")
@@ -37,10 +38,27 @@ def upload_file(file_path, bucket_name, s3_key):
         logging.error(f"Error uploading {file_path} to S3: {e}")
         return False
 
-def sync_to_s3(local_directory, bucket_name, s3_directory):
-    """ Sync local directory to S3 bucket """
+def validate_file_count(local_directory, csv_file):
+    """Validate that the number of files matches the CSV entries"""
+    df = pd.read_csv(csv_file)
+    expected_count = len(df)
+    
+    actual_count = sum([len(files) for _, _, files in os.walk(local_directory)])
+    
+    if actual_count != expected_count:
+        logging.error(f"File count mismatch. Expected: {expected_count}, Actual: {actual_count}")
+        return False
+    
+    logging.info(f"File count validation passed. {actual_count} files found.")
+    return True
+
+def sync_to_s3(local_directory, bucket_name, s3_directory, csv_file):
+    """Sync local directory to S3 bucket"""
     if not os.path.exists(local_directory):
         logging.error(f"Local directory not found: {local_directory}")
+        return False
+
+    if not validate_file_count(local_directory, csv_file):
         return False
 
     # Get list of files already in S3
@@ -81,6 +99,7 @@ if __name__ == "__main__":
     local_directory = "generated_images"
     bucket_name = os.getenv("S3_BUCKET_NAME")
     s3_directory = "batch_generated_images"
+    csv_file = "images.csv"  # Add this line to specify the CSV file
     
     if not bucket_name:
         logging.error("S3_BUCKET_NAME environment variable is not set")
